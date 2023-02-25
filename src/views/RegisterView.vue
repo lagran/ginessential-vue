@@ -4,30 +4,28 @@
       ref="form"
       :data="formData"
       :colon="true"
-      :label-width="0"
       :rules="rules"
       @reset="onReset"
       @submit="onSubmit"
       @validate="onValidate"
     >
+      <t-form-item label="用户名" name="name">
+        <t-input v-model="formData.name" clearable placeholder="请输入用户名">
+        </t-input>
+      </t-form-item>
+
       <t-form-item label="手机号" name="telephone">
         <t-input v-model="formData.telephone" clearable placeholder="请输入手机号">
-          <template #prefix-icon>
-            <desktop-icon />
-          </template>
         </t-input>
       </t-form-item>
 
       <t-form-item label="密码"  name="password">
         <t-input v-model="formData.password" type="password" clearable placeholder="请输入密码">
-          <template #prefix-icon>
-            <lock-on-icon />
-          </template>
         </t-input>
       </t-form-item>
 
       <t-form-item>
-        <t-button theme="primary" type="submit" block>登录</t-button>
+        <t-button theme="primary" type="submit" block>注册</t-button>
       </t-form-item>
     </t-form>
   </div>
@@ -35,19 +33,21 @@
 <script>
 import { reactive, ref } from 'vue';
 import { MessagePlugin } from 'tdesign-vue-next';
-import { DesktopIcon, LockOnIcon } from 'tdesign-icons-vue-next';
-import axios from 'axios';
+import userService from '@/service/userService';
+import storageService from '@/service/storageService';
+import { useRouter } from 'vue-router';
 
 export default {
   name: 'LoginView',
 };
 </script>
 <script setup>
-
+const router = useRouter();
 const form = ref(null);
 const formData = reactive({
   telephone: '',
   password: '',
+  name: '',
 });
 
 const onReset = () => {
@@ -63,15 +63,22 @@ const onSubmit = ({ validateResult, firstError, e }) => {
     return;
   }
   // 请求
-  const api = 'http://localhost:8081/api/auth/login';
-  axios.post(api, { ...formData }).then((res) => {
+  // const api = 'http://localhost:8081/api/auth/register';
+  userService.register(formData).then((res) => {
     // 保存token
     console.log(res.data);
+    storageService.set(storageService.USER_TOKEN, res.data.data.token);
+    userService.info().then((res) => {
+      // 保存用户信息
+      storageService.set(storageService.USER_INFO, res.data.data.user);
+      // 跳转主页
+      router.replace({ name: 'home' });
+    });
     // 跳转主页
-    MessagePlugin.success('登录成功');
+    MessagePlugin.success('注册成功');
   }).catch((err) => {
     console.log('err', err);
-    MessagePlugin.error('登录失败');
+    MessagePlugin.error('注册失败');
   });
 };
 
@@ -87,6 +94,7 @@ const rules = {
     { validator: (val) => val?.length === 11, message: '手机号需要为11位' },
   ],
   password: [{ required: true, message: '密码必填', type: 'error' }],
+  name: [{ required: true, message: '用户名必填', type: 'error' }],
 };
 
 const onValidate = ({ validateResult, firstError }) => {
